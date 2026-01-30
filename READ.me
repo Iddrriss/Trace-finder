@@ -1,0 +1,234 @@
+A professional, modular forensic triage tool for Windows systems
+TraceFinder helps incident responders, digital forensic examiners, and security analysts quickly detect user activity within a configurable time window (default: 180 minutes). Built with forensic best practices and zero external dependencies.
+
+ Key Features
+Comprehensive Artifact Collection
+
+ Execution Evidence - UserAssist, Prefetch files
+ File Activity - Recent files, RecentDocs registry
+ Network Activity - Chrome/Edge/Firefox browser history, downloads
+ Hardware Tracking - USB device connection history
+ Command Line - PowerShell history, Run dialog (RunMRU)
+ Registry Artifacts - TypedPaths (Explorer address bar)
+
+Professional Output
+
+ Dual Timezone Display - UTC (forensic standard) + Local time
+ CSV Export - SIEM-compatible, timestamped filenames
+ Formatted Console Table - Real-time timeline visualization
+ Statistical Summary - Artifact breakdown by type and source
+
+Design Principles
+
+Zero Dependencies - Pure Python standard library
+Modular Architecture - Easy to extend and maintain
+Robust Error Handling - Graceful degradation on failures
+Fast Execution - Completes in 30 seconds to 2 minutes
+ PEP8 Compliant - Professional code standards
+
+
+ System Requirements
+Requirement Specification Operating System Windows 10/11, Windows Server 2019/2022Python Version3.8 or higher (3.12 recommended)DependenciesNone (pure standard library)PrivilegesAdministrator (recommended for full features)Disk Space< 1 MBRAM< 50 MB during execution
+
+ Quick Start
+1. Download TraceFinder
+bash# Clone the repository
+git clone https://github.com/yourusername/TraceFinder.git
+cd TraceFinder
+
+# Or download and extract ZIP
+2. Verify Python Installation
+bashpython --version
+# Should show: Python 3.8.x or higher
+3. Run TraceFinder
+bash# Run as Administrator (recommended for full functionality)
+python tracefinder.py
+That's it! No installation, no dependencies, no configuration needed.
+
+ Project Structure
+TraceFinder/
+│
+├── tracefinder.py              # Main entry point
+├── README.md                   # This file
+
+├── requirements.txt            # Empty (no dependencies!)
+│
+├── core/
+│   ├── __init__.py
+│   ├── privileges.py           # Administrator privilege checking
+│   └── time_window.py          # Time window management
+│
+├── collectors/
+│   ├── __init__.py
+│   ├── execution.py            # UserAssist, Prefetch
+│   ├── files.py                # Recent files, RecentDocs
+│   ├── hardware.py             # USB device history
+│   ├── commands.py             # PowerShell, RunMRU
+│   ├── network.py              # Browser history, downloads
+│   └── registry.py             # TypedPaths
+│
+└── reporters/
+    ├── __init__.py
+    ├── console.py              # Console table formatting
+    └── csv_exporter.py         # CSV report generation
+
+💻 Usage Examples
+Basic Usage (Default 180-minute window)
+bashpython tracefinder.py
+Custom Time Window
+bash# Last 30 minutes
+python tracefinder.py 30
+
+# Last 6 hours
+python tracefinder.py 360
+
+# Last 24 hours
+python tracefinder.py 1440
+Output Example
+======================================================================
+TIMESTAMP (UTC)     | TIMESTAMP (WAT) | ARTIFACT TYPE   | SOURCE
+----------------------------------------------------------------------
+2026-01-29 14:30:45 | 2026-01-29 15:30:45 | Execution       | Prefetch
+2026-01-29 14:25:12 | 2026-01-29 15:25:12 | Web Activity    | Chrome Browser
+2026-01-29 14:20:33 | 2026-01-29 15:20:33 | File Access     | Recent Folder
+----------------------------------------------------------------------
+Total Findings: 127
+
+ Use Cases
+1. Incident Response
+Quickly identify suspicious activity during security incidents:
+
+Programs executed in last 3 hours
+Files accessed or modified
+USB devices connected (data exfiltration?)
+PowerShell commands (malicious scripts?)
+Websites visited (phishing, C&C servers?)
+
+2. Digital Forensics
+Create forensic timelines for investigations:
+
+User activity reconstruction
+Chain of custody documentation
+Legal evidence collection (UTC timestamps)
+Timeline correlation across systems
+
+3. Insider Threat Detection
+Monitor for data exfiltration or policy violations:
+
+USB device connections + file access = potential data theft
+Cloud storage access + document access = unauthorized copying
+Encryption tool execution + file deletion = evidence destruction
+
+4. Security Auditing
+Regular compliance and security checks:
+
+Validate security controls
+Identify shadow IT (unauthorized software)
+Detect risky browsing behavior
+Policy compliance verification
+
+5. SIEM Integration
+Export forensic data for log aggregation:
+
+CSV format compatible with Splunk, ELK, QRadar
+Automated threat detection workflows
+Baseline anomaly detection
+Historical trend analysis
+
+6. Or simply just check who messed with your stuff while you were AFK!
+
+
+ Privilege Requirements
+With Administrator Privileges  (Recommended)
+
+All 10 artifact sources accessible
+Complete forensic coverage
+Prefetch file analysis
+USB device tracking
+
+Without Administrator Privileges 
+
+8 out of 10 artifact sources accessible
+Missing: Prefetch files, USB device history
+Still provides valuable forensic data
+
+TraceFinder still works without admin privileges and continues collecting available artifacts.
+
+ Artifact Coverage
+CategoryArtifactsAdmin Required?Forensic ValueExecutionUserAssist, PrefetchPrefetch onlyHigh - Shows all programs runFile ActivityRecent Files, RecentDocsNoHigh - Documents accessedNetworkBrowser History, DownloadsNoHigh - Web activity, downloadsHardwareUSB DevicesYesCritical - Data exfiltration detectionCommandsPowerShell, RunMRUNoCritical - Script execution trackingRegistryTypedPathsNoMedium - Manual navigation tracking
+Total Coverage: 10 artifact sources across 6 forensic categories
+
+ Output Formats
+Console Table
+Real-time formatted timeline with dual timezone display (UTC + Local)
+CSV Export
+
+Automatic timestamped filenames: tracefinder_report_20260129_143045.csv
+Prevents overwriting previous scans
+Compatible with Excel, SIEM systems, forensic tools
+Includes both UTC and local timestamps
+
+
+
+🧪 Testing
+Verify Installation
+bash# Test Python imports
+python -c "from core import privileges; from collectors import execution; print('✓ Imports successful')"
+
+# Syntax check
+python -m py_compile tracefinder.py
+Generate Test Data
+
+Open some documents
+Browse websites (Chrome/Edge/Firefox)
+Run PowerShell commands
+Connect a USB device (if available)
+Run TraceFinder to see collected artifacts
+
+
+ Contributing
+We welcome contributions! Please see CONTRIBUTING.md for guidelines.
+Areas for Enhancement
+
+ Windows Event Log parsing (Event ID 4688 - Process Creation)
+ Scheduled Tasks analysis
+ JSON export format
+ HTML report with charts and graphs
+ Multi-threading for improved performance
+ Real-time monitoring mode
+ Command-line interface (CLI) improvements
+
+
+
+
+ Acknowledgments
+TraceFinder is built on forensic research from:
+
+Eric Zimmerman - Prefetch analysis and forensic tool development
+Didier Stevens - UserAssist registry research
+Harlan Carvey - Windows Registry forensics
+SANS Institute - Digital forensics training and methodologies
+
+
+Disclaimer!!!
+Use only on systems you own or have explicit written permission to analyze
+Unauthorized use may violate privacy laws and computer fraud statutes
+Always follow your organization's policies and legal guidelines
+Consult with legal counsel for investigations involving legal proceedings
+
+The authors and contributors of TraceFinder assume no liability for misuse of this tool.
+
+ 
+
+ Version History
+v1.0.0 (January 2026) - Initial Release
+
+✅ 10 artifact collectors (Execution, Files, Network, Hardware, Commands, Registry)
+✅ Dual timezone display (UTC + Local)
+✅ CSV export with timestamped filenames
+✅ Console table formatting with statistics
+✅ Robust error handling and graceful degradation
+✅ Zero external dependencies
+✅ PEP8 compliant modular architecture
+✅ Comprehensive documentation
+
