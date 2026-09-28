@@ -4,11 +4,44 @@ A professional, modular forensic triage tool for Windows systems. TraceFinder he
 
 ---
 
+## 🚀 What's New in v1.1.0 (Upgrade Notes)
+
+TraceFinder has received a major upgrade from **v1.0.0** to **v1.1.0**. Here is a breakdown of what was added, improved, and fixed:
+
+### 1. Windows Event Log Collector (`collectors/events.py`)
+- **System Event Logs**: Captures newly installed services (Event 7045), system shutdowns/reboots (Event 1074), OS boot and clean shutdown timestamps (Events 6005/6006), service startup configuration changes (Event 7040), and system log cleared events (Event 104 - anti-forensics alert).
+- **Security Event Logs** *(when running as Administrator)*: Captures process creation with command-line arguments and parent processes (Event 4688), successful/failed user logons (Events 4624/4625), user account creation/deletion (Events 4720/4726), and audit log cleared events (Event 1102).
+- **PowerShell ScriptBlock Logs**: Captures script code executed via PowerShell ScriptBlock logging (Event 4104), providing visibility into in-memory scripts and malicious commands.
+- Implemented natively using Windows `wevtutil.exe` and `xml.etree.ElementTree` without any third-party dependencies.
+
+### 2. Multi-Profile & Multi-Browser Enumeration (`collectors/network.py`)
+- **Multi-Profile Support**: Automatically discovers and parses all user profiles (`Default`, `Profile 1`, `Profile 2`, `Guest Profile`, etc.) instead of assuming a single default profile.
+- **Broad Browser Coverage**: Added support across Chromium browsers: **Google Chrome**, **Microsoft Edge**, **Brave Browser**, **Opera**, **Opera GX**, and **Vivaldi**.
+- **Firefox Profiles**: Scans all active profile directories containing `places.sqlite` rather than stopping at the first profile.
+- Sources are now labeled with their exact profile for precise forensic attribution (e.g., `Chrome (Profile 1)`).
+
+### 3. Structured SIEM JSON Report Exporter (`reporters/json_exporter.py`)
+- Added structured JSON export (`tracefinder_report_YYYYMMDD_HHMMSS.json`) alongside CSV.
+- Includes scan metadata, triage window bounds, system timezone offsets, statistical breakdown, and standardized chronological findings.
+
+### 4. Advanced CLI Interface (`tracefinder.py`)
+- Replaced basic positional arguments with standard Python `argparse`.
+- Added flags: `-w/--window`, `-o/--output`, `-f/--format {csv,json,both,none}`, `--json`, `--no-export`, `-q/--quiet`, `-y/--yes`, and `-v/--verbose`.
+- Fully backwards compatible with positional shorthand syntax (e.g., `python tracefinder.py 60`).
+
+### 5. Forensic Accuracy & Reliability Fixes
+- **RunMRU**: Fixed trailing delimiter stripping bug (`.rstrip('\\1')` stripped trailing `1`s from commands like `ping 192.168.1.1`; now cleanly removes the exact delimiter).
+- **RecentDocs**: Fixed UTF-16LE binary parsing to cleanly extract null-terminated filenames without trailing binary metadata junk.
+- **Prefetch**: Path resolves dynamically via `%SYSTEMROOT%` rather than hardcoding `C:\Windows`.
+- **Diagnostic Suite**: Added `tests/test_all.py` (unit tests) and `check.py` (system diagnostic health check).
+
+---
+
 ## Features
 
-- **Execution Evidence**: UserAssist, Prefetch files, Process Creation events (4688)
+- **Execution Evidence**: UserAssist, Prefetch files, Security Process Creation events (4688)
 - **File Activity**: Recent files (`.lnk`), RecentDocs registry
-- **Network & Browsing**: Chrome, Edge, Brave, Opera, Vivaldi, Firefox browser history & downloads across **all user profiles**
+- **Network & Browsing**: Chrome, Edge, Brave, Opera, Opera GX, Vivaldi, Firefox browser history & downloads across **all user profiles**
 - **Hardware Tracking**: USB device connection history (`USBSTOR`)
 - **Command Line**: PowerShell history (`ConsoleHost_history.txt`), Run dialog (`RunMRU`), PowerShell ScriptBlock logs (4104)
 - **Windows Event Logs**: Service installation (7045), system shutdowns/reboots (1074), logons (4624/4625), log clears (104/1102)
@@ -77,6 +110,16 @@ options:
   -q, --quiet           Quiet mode: suppress detailed console timeline table
   -y, --yes             Non-interactive mode: skip administrator confirmation prompt
   -v, --verbose         Enable verbose error output and tracebacks
+```
+
+---
+
+## Verification & Tests
+
+Run the built-in diagnostic suite:
+```cmd
+python -m unittest discover tests
+python check.py
 ```
 
 Happy Forensics!

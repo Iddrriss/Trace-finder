@@ -190,9 +190,12 @@ python -m py_compile tracefinder.py
 ## Version History
 
 - **v1.1.0 (September 2026)**
-  - Added Windows Event Log collector (`collectors/events.py`) supporting System, Security, and PowerShell Operational events (Services, Shutdowns, ScriptBlocks, Log Tampering).
-  - Multi-profile and multi-browser enumeration for Chrome, Edge, Brave, Opera, Opera GX, Vivaldi, and Firefox.
-  - Added structured, SIEM-compatible JSON report export (`reporters/json_exporter.py`).
-  - Added full `argparse` CLI with `-w/--window`, `-o/--output`, `-f/--format`, `--json`, `--no-export`, `-q/--quiet`, `-y/--yes`, and `-v/--verbose`.
+  - **Windows Event Log Analysis**: Added `collectors/events.py` collecting System (Services 7045/7040, Shutdowns 1074, Boot/Shutdown 6005/6006, Cleared 104), Security (Process Creation 4688, Logons 4624/4625, Account management 4720/4726, Audit Cleared 1102), and PowerShell ScriptBlocks (4104).
+  - **Multi-Profile Browser Triage**: Added full profile enumeration (`Default`, `Profile *`, `Guest Profile`) across Chrome, Edge, Brave, Opera, Opera GX, Vivaldi, and Firefox with profile-level forensic attribution.
+  - **JSON Report Generation**: Added SIEM-ready structured JSON exporter in `reporters/json_exporter.py` with metadata, statistics, and standardized timeline schema.
+  - **Advanced CLI**: Full `argparse` CLI implementation with `-w/--window`, `-o/--output`, `-f/--format {csv,json,both,none}`, `--json`, `--no-export`, `-q/--quiet`, `-y/--yes`, and `-v/--verbose`.
+  - **Forensic Accuracy Fixes**: Fixed `RunMRU` delimiter stripping logic; fixed `RecentDocs` UTF-16LE binary metadata decoding; made `Prefetch` path resolve dynamically via `%SYSTEMROOT%`.
+  - **Testing & Diagnostics**: Added automated test suite (`tests/test_all.py`) and diagnostic health check script (`check.py`).
 - **v1.0.0 (January 2026)**
   - Initial Release with 10 artifact collectors, dual timezone support, and CSV reporting.
+
