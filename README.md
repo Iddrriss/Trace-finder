@@ -152,16 +152,6 @@ python -m unittest discover tests
 
 ---
 
-## Acknowledgments
-
-TraceFinder draws inspiration from research and tooling in the digital forensics community:
-- Eric Zimmerman for Prefetch and forensic parser research
-- Didier Stevens for UserAssist registry analysis
-- Harlan Carvey for Windows Registry forensics
-- SANS Digital Forensics and Incident Response (DFIR) methodologies
-
----
-
 ## Disclaimer
 
 This tool is intended for authorized digital forensics, incident response, and security auditing on systems you own or have explicit authorization to examine. Unauthorized monitoring may violate applicable privacy and computer security laws.
