@@ -152,6 +152,4 @@ python -m unittest discover tests
 
 ---
 
-## Disclaimer
-
-This tool is intended for authorized digital forensics, incident response, and security auditing on systems you own or have explicit authorization to examine. Unauthorized monitoring may violate applicable privacy and computer security laws.
+Happy forensics ^_~
