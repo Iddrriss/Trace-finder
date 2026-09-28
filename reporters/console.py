@@ -1,18 +1,9 @@
-"""
-TraceFinder - Console Reporting Module
-reporters/console.py
-
-Author: Senior Cyber Security and Forensic Engineer
-Python Version: 3.12
-Compliance: PEP8
-
-Updated: Added local timezone display alongside UTC
-"""
+"""Console output formatting and summary statistics."""
 
 import sys
+import time
 from datetime import datetime
 
-# Ensure UTF-8 output encoding on Windows consoles
 if sys.platform == 'win32':
     try:
         if hasattr(sys.stdout, 'reconfigure'):
@@ -24,12 +15,12 @@ if sys.platform == 'win32':
 
 
 def print_banner(window_minutes=180):
-    """Display TraceFinder ASCII banner."""
+    """Display TraceFinder startup banner."""
     window_text = f"{window_minutes}-Minute Triage Window Analysis"
     print()
     print("=" * 70)
     print("╔════════════════════════════════════════════════════════════════════╗")
-    print("║                         TraceFinder v1.1.0                         ║")
+    print("║                         TraceFinder v2.0                           ║")
     print("║            Windows Forensic Activity Detection & Triage            ║")
     print("║                                                                    ║")
     print(f"║{window_text.center(68)}║")
@@ -39,62 +30,42 @@ def print_banner(window_minutes=180):
 
 
 def get_local_timezone_name():
-    """
-    Get the local timezone name/offset for display.
-    
-    Returns:
-        str: Timezone name or offset (e.g., "UTC+1" or "WAT")
-    """
-    import time
-    
-    # Get timezone offset
+    """Return local timezone name or offset string."""
     offset_seconds = -time.timezone
     offset_hours = offset_seconds / 3600
-    
-    # Try to get timezone name
+
     if time.daylight and time.localtime().tm_isdst:
-        tz_name = time.tzname[1]  # DST name
+        tz_name = time.tzname[1]
     else:
-        tz_name = time.tzname[0]  # Standard time name
-    
-    # If timezone name is generic, use offset
+        tz_name = time.tzname[0]
+
     if tz_name in ['GMT', 'UTC'] or len(tz_name) > 5:
         return f"UTC{offset_hours:+.0f}"
-    
+
     return tz_name
 
 
 def print_findings_table(findings):
-    """
-    Print findings in a beautifully formatted console table.
-    Shows both UTC and Local timestamps.
-    
-    Args:
-        findings (list): List of finding dictionaries.
-    """
+    """Render findings in a console table with UTC and local timestamps."""
     if not findings:
         print("[!] No findings to display")
         return
-    
-    # Get local timezone name for header
+
     local_tz = get_local_timezone_name()
-    
-    # Updated column widths to accommodate both timestamps
     col_widths = {
-        'timestamp_utc': 19,      # UTC timestamp
-        'timestamp_local': 19,     # Local timestamp
+        'timestamp_utc': 19,
+        'timestamp_local': 19,
         'artifact_type': 15,
         'source': 18,
         'description': 45,
         'details': 50
     }
-    
+
     print("=" * 180)
-    print("TraceFinder - Forensic Timeline Report (Dual Timezone Display)".center(180))
+    print("TraceFinder - Forensic Timeline Report".center(180))
     print("=" * 180)
     print()
-    
-    # Header with timezone names
+
     header = (
         f"{'TIMESTAMP (UTC)':<{col_widths['timestamp_utc']}} | "
         f"{'TIMESTAMP (' + local_tz + ')':<{col_widths['timestamp_local']}} | "
@@ -105,26 +76,21 @@ def print_findings_table(findings):
     )
     print(header)
     print("-" * 180)
-    
-    # Print each finding with both timestamps
+
     for finding in findings:
-        # UTC timestamp (already formatted)
         timestamp_utc = finding['timestamp']
-        
-        # Convert to local timezone
         try:
             utc_dt = finding['timestamp_dt']
-            local_dt = utc_dt.astimezone()  # Converts to system local timezone
+            local_dt = utc_dt.astimezone()
             timestamp_local = local_dt.strftime('%Y-%m-%d %H:%M:%S')
         except Exception:
             timestamp_local = "Conversion Error"
-        
-        # Truncate other fields
+
         artifact_type = finding['artifact_type'][:col_widths['artifact_type']]
         source = finding['source'][:col_widths['source']]
         description = finding['description'][:col_widths['description']]
         details = finding['details'][:col_widths['details']]
-        
+
         row = (
             f"{timestamp_utc:<{col_widths['timestamp_utc']}} | "
             f"{timestamp_local:<{col_widths['timestamp_local']}} | "
@@ -134,55 +100,41 @@ def print_findings_table(findings):
             f"{details:<{col_widths['details']}}"
         )
         print(row)
-    
+
     print("-" * 180)
     print(f"Total Findings: {len(findings)}")
-    print(f"Timezone: All times shown in UTC and {local_tz} (local system time)")
+    print(f"Timezone: Timestamps displayed in UTC and local ({local_tz})")
     print("=" * 180)
 
 
 def print_statistics(findings):
-    """
-    Print statistical summary of collected artifacts.
-    
-    Args:
-        findings (list): List of finding dictionaries.
-    """
+    """Print count breakdown of collected artifacts by type and source."""
     if not findings:
         return
-    
+
     type_counts = {}
     source_counts = {}
-    
+
     for finding in findings:
-        artifact_type = finding['artifact_type']
-        source = finding['source']
-        
-        type_counts[artifact_type] = type_counts.get(artifact_type, 0) + 1
-        source_counts[source] = source_counts.get(source, 0) + 1
-    
+        art_type = finding['artifact_type']
+        src = finding['source']
+        type_counts[art_type] = type_counts.get(art_type, 0) + 1
+        source_counts[src] = source_counts.get(src, 0) + 1
+
     print()
-    print("=" * 70)
-    print("Statistical Summary".center(70))
-    print("=" * 70)
+    print("=" * 65)
+    print("Artifact Summary".center(65))
+    print("=" * 65)
     print()
-    
-    print("[*] Artifacts by Type:")
-    for artifact_type, count in sorted(
-        type_counts.items(),
-        key=lambda x: x[1],
-        reverse=True
-    ):
+
+    print("[*] By Artifact Type:")
+    for artifact_type, count in sorted(type_counts.items(), key=lambda x: x[1], reverse=True):
         print(f"    {artifact_type:<20} : {count:>5} entries")
-    
+
     print()
-    print("[*] Artifacts by Source:")
-    for source, count in sorted(
-        source_counts.items(),
-        key=lambda x: x[1],
-        reverse=True
-    ):
+    print("[*] By Source:")
+    for source, count in sorted(source_counts.items(), key=lambda x: x[1], reverse=True):
         print(f"    {source:<20} : {count:>5} entries")
-    
+
     print()
-    print("=" * 70)
+    print("=" * 65)

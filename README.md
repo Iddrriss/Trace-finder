@@ -1,96 +1,68 @@
-# Trace-finder (v2.0)
+# TraceFinder (v2.0)
 
-A professional, modular forensic triage tool for Windows systems. TraceFinder helps incident responders, digital forensic examiners, and security analysts quickly detect user and system activity within a configurable time window (default: 180 minutes). Built with forensic best practices and **zero external dependencies**.
-
----
-
-## 🚀 What's New in v2.0 (Upgrade Notes)
-
-TraceFinder has received a major upgrade from **v2.0** to **v2.0**. Here is a breakdown of what was added, improved, and fixed:
-
-### 1. Windows Event Log Collector (`collectors/events.py`)
-- **System Event Logs**: Captures newly installed services (Event 7045), system shutdowns/reboots (Event 1074), OS boot and clean shutdown timestamps (Events 6005/6006), service startup configuration changes (Event 7040), and system log cleared events (Event 104 - anti-forensics alert).
-- **Security Event Logs** *(when running as Administrator)*: Captures process creation with command-line arguments and parent processes (Event 4688), successful/failed user logons (Events 4624/4625), user account creation/deletion (Events 4720/4726), and audit log cleared events (Event 1102).
-- **PowerShell ScriptBlock Logs**: Captures script code executed via PowerShell ScriptBlock logging (Event 4104), providing visibility into in-memory scripts and malicious commands.
-- Implemented natively using Windows `wevtutil.exe` and `xml.etree.ElementTree` without any third-party dependencies.
-
-### 2. Multi-Profile & Multi-Browser Enumeration (`collectors/network.py`)
-- **Multi-Profile Support**: Automatically discovers and parses all user profiles (`Default`, `Profile 1`, `Profile 2`, `Guest Profile`, etc.) instead of assuming a single default profile.
-- **Broad Browser Coverage**: Added support across Chromium browsers: **Google Chrome**, **Microsoft Edge**, **Brave Browser**, **Opera**, **Opera GX**, and **Vivaldi**.
-- **Firefox Profiles**: Scans all active profile directories containing `places.sqlite` rather than stopping at the first profile.
-- Sources are now labeled with their exact profile for precise forensic attribution (e.g., `Chrome (Profile 1)`).
-
-### 3. Structured SIEM JSON Report Exporter (`reporters/json_exporter.py`)
-- Added structured JSON export (`tracefinder_report_YYYYMMDD_HHMMSS.json`) alongside CSV.
-- Includes scan metadata, triage window bounds, system timezone offsets, statistical breakdown, and standardized chronological findings.
-
-### 4. Advanced CLI Interface (`tracefinder.py`)
-- Replaced basic positional arguments with standard Python `argparse`.
-- Added flags: `-w/--window`, `-o/--output`, `-f/--format {csv,json,both,none}`, `--json`, `--no-export`, `-q/--quiet`, `-y/--yes`, and `-v/--verbose`.
-- Fully backwards compatible with positional shorthand syntax (e.g., `python tracefinder.py 60`).
-
-### 5. Forensic Accuracy & Reliability Fixes
-- **RunMRU**: Fixed trailing delimiter stripping bug (`.rstrip('\\1')` stripped trailing `1`s from commands like `ping 192.168.1.1`; now cleanly removes the exact delimiter).
-- **RecentDocs**: Fixed UTF-16LE binary parsing to cleanly extract null-terminated filenames without trailing binary metadata junk.
-- **Prefetch**: Path resolves dynamically via `%SYSTEMROOT%` rather than hardcoding `C:\Windows`.
-- **Diagnostic Suite**: Added `tests/test_all.py` (unit tests) and `check.py` (system diagnostic health check).
+A lightweight, modular Windows forensic triage tool designed for incident responders, digital forensic examiners, and security analysts. TraceFinder gathers and correlates evidence of user and system activity within a configurable time window (default: 180 minutes), with **zero external dependencies**.
 
 ---
 
-## Features
+## Artifact Coverage
 
-- **Execution Evidence**: UserAssist, Prefetch files, Security Process Creation events (4688)
-- **File Activity**: Recent files (`.lnk`), RecentDocs registry
-- **Network & Browsing**: Chrome, Edge, Brave, Opera, Opera GX, Vivaldi, Firefox browser history & downloads across **all user profiles**
-- **Hardware Tracking**: USB device connection history (`USBSTOR`)
-- **Command Line**: PowerShell history (`ConsoleHost_history.txt`), Run dialog (`RunMRU`), PowerShell ScriptBlock logs (4104)
-- **Windows Event Logs**: Service installation (7045), system shutdowns/reboots (1074), logons (4624/4625), log clears (104/1102)
-- **Registry Artifacts**: TypedPaths (Explorer address bar navigation)
-- **Flexible Export**: Dual timezone display (UTC + Local), SIEM-ready CSV and JSON reports
+TraceFinder parses the following evidence sources across the triage window:
+
+| Category | Artifacts | Admin Required? | Description |
+| :--- | :--- | :---: | :--- |
+| **Execution** | UserAssist, Prefetch, Security 4688 | Partial | GUI executions (with run count and focus time), Prefetch binaries, and process creation events with command lines. |
+| **File Activity** | Recent Files (`.lnk`), RecentDocs | No | Recently opened files, shortcuts, and document extensions from the user registry. |
+| **Network** | Chrome, Edge, Brave, Opera, Opera GX, Vivaldi, Firefox | No | Browsing history and downloaded files across all discovered browser profiles. |
+| **Hardware** | USB Devices (`USBSTOR`) | Yes | First-install and connection timestamps for USB storage devices. |
+| **Command Line** | PowerShell history, RunMRU, ScriptBlock (4104) | No | Console history, Run dialog entries, and logged PowerShell script blocks. |
+| **System Events** | System & Security Event Logs | Partial | Service installations (7045/7040), shutdowns/reboots (1074, 6005/6006), account changes (4720/4726), and audit log clears (104/1102). |
+| **Registry** | TypedPaths | No | Paths manually typed into Windows Explorer address bar. |
 
 ---
 
 ## Requirements
 
-- **Operating System**: Windows 10/11 or Windows Server 2019/2022
-- **Python**: 3.8+ (Pure standard library — **zero third-party dependencies required**)
-- **Privileges**: Administrator recommended for full coverage (Prefetch, USBSTOR, Security Event Logs); standard user access works with graceful degradation.
+- **Operating System**: Windows 10, Windows 11, Windows Server 2019/2022
+- **Python**: 3.8+ (uses only Python standard library)
+- **Privileges**: Administrator recommended for full coverage (Prefetch, USBSTOR, Security Event Logs). Standard user access collects all user-level artifacts with graceful degradation.
 
 ---
 
-## Installation & Usage
+## Quick Start
 
-1. Clone the repository:
-   ```cmd
-   git clone https://github.com/Iddrriss/Trace-finder.git
-   cd Trace-finder
-   ```
+```cmd
+git clone https://github.com/Iddrriss/Trace-finder.git
+cd Trace-finder
 
-2. Basic run (default 180-minute window, exports CSV):
-   ```cmd
-   python tracefinder.py
-   ```
-
-3. Custom triage window (e.g., last 60 minutes or last 24 hours):
-   ```cmd
-   python tracefinder.py 60
-   python tracefinder.py -w 1440
-   ```
-
-4. Export to JSON (or both CSV and JSON):
-   ```cmd
-   python tracefinder.py -f json
-   python tracefinder.py -f both -o case_report
-   ```
-
-5. Non-interactive & quiet execution (ideal for scripts and automated triage):
-   ```cmd
-   python tracefinder.py --yes --quiet -f both
-   ```
+# Run with default 180-minute window (Administrator recommended)
+python tracefinder.py
+```
 
 ---
 
-## Command Line Options
+## Usage Examples
+
+```cmd
+# Scan the default 3-hour window and export to CSV
+python tracefinder.py
+
+# Shorthand for a custom time window (e.g., last 60 minutes)
+python tracefinder.py 60
+
+# Specify window size with flag (e.g., last 24 hours)
+python tracefinder.py -w 1440
+
+# Export to JSON instead of CSV
+python tracefinder.py -f json
+
+# Export both CSV and JSON with a custom output prefix
+python tracefinder.py -f both -o incident_404
+
+# Scripting / automated run: skip prompts and suppress the wide console table
+python tracefinder.py --yes --quiet -f both
+```
+
+### Command Line Options
 
 ```text
 usage: tracefinder [-h] [-w WINDOW] [-o OUTPUT] [-f {csv,json,both,none}]
@@ -98,28 +70,98 @@ usage: tracefinder [-h] [-w WINDOW] [-o OUTPUT] [-f {csv,json,both,none}]
                    [positional_window]
 
 positional arguments:
-  positional_window     Triage window in minutes (positional shorthand for -w)
+  positional_window     Triage window in minutes (shorthand for -w)
 
 options:
-  -h, --help            Show this help message and exit
+  -h, --help            Show help message and exit
   -w, --window WINDOW   Triage window size in minutes (default: 180)
-  -o, --output OUTPUT   Custom output filename or base prefix for exported reports
-  -f, --format FORMAT   Report export format: csv, json, both, or none (default: csv)
-  --json                Shorthand flag to export JSON report
-  --no-export           Suppress writing report files to disk (console display only)
-  -q, --quiet           Quiet mode: suppress detailed console timeline table
-  -y, --yes             Non-interactive mode: skip administrator confirmation prompt
-  -v, --verbose         Enable verbose error output and tracebacks
+  -o, --output OUTPUT   Output filename or base prefix for exported reports
+  -f, --format FORMAT   Report format: csv, json, both, or none (default: csv)
+  --json                Export JSON report (shorthand for -f json or -f both)
+  --no-export           Display findings in console only (do not write files)
+  -q, --quiet           Suppress timeline table (print statistics only)
+  -y, --yes             Skip confirmation prompts (non-interactive mode)
+  -v, --verbose         Print error tracebacks if a collector encounters an issue
 ```
 
 ---
 
-## Verification & Tests
+## Project Structure
 
-Run the built-in diagnostic suite:
-```cmd
-python -m unittest discover tests
-python check.py
+```text
+TraceFinder/
+├── tracefinder.py              # CLI entry point and triage orchestrator
+├── check.py                    # Environment and collector diagnostic checks
+├── requirements.txt            # Dependency list (standard library only)
+├── README.md                   # Documentation
+│
+├── core/
+│   ├── privileges.py           # Administrator token verification
+│   └── time_window.py          # Triage window calculation & FILETIME conversion
+│
+├── collectors/
+│   ├── execution.py            # UserAssist and Prefetch collectors
+│   ├── files.py                # Recent files (.lnk) and RecentDocs
+│   ├── hardware.py             # USBSTOR registry device enumeration
+│   ├── commands.py             # PSReadLine history and RunMRU
+│   ├── network.py              # Multi-profile browser history and downloads
+│   ├── registry.py             # TypedPaths address bar entries
+│   └── events.py               # Windows Event Logs (System, Security, PowerShell)
+│
+├── reporters/
+│   ├── console.py              # Formatted timeline table and summary statistics
+│   ├── csv_exporter.py         # SIEM-compatible CSV report exporter
+│   └── json_exporter.py        # Structured JSON report exporter
+│
+└── tests/
+    └── test_all.py             # Unit tests for time, conversion, and export logic
 ```
 
-Happy Forensics!
+---
+
+## Output Formats
+
+1. **Console Table**: Displays chronological timeline with dual timezones (UTC for forensic standards, and local system timezone for analyst convenience).
+2. **CSV Export**: SIEM-ready spreadsheet with standardized columns:
+   `Timestamp (UTC)`, `Timestamp (Local)`, `Artifact Type`, `Source`, `Description`, `Details`.
+3. **JSON Export**: Structured report containing scan metadata, triage parameters, statistical aggregations, and individual findings.
+
+---
+
+## Use Cases
+
+- **Incident Response**: Quickly establish an initial timeline of what ran, what was downloaded, and what was accessed on a suspect machine.
+- **Insider Threat Detection**: Identify USB storage connections paired with recent file access or cloud storage navigation.
+- **System Auditing**: Verify recent software installations, admin logons, or anti-forensic log-clearing attempts.
+- **Triage Automation**: Run non-interactively (`--yes --quiet -f json`) in IR playbooks or live-response scripts.
+- **General Check**: Quickly check recent system activity when stepping back to an unattended workstation.
+
+---
+
+## Testing & Diagnostics
+
+Run the diagnostic suite to verify syntax, permissions, and collector reachability:
+
+```cmd
+# Run diagnostic health check
+python check.py
+
+# Run unit tests
+python -m unittest discover tests
+```
+
+---
+
+## Acknowledgments
+
+TraceFinder draws inspiration from research and tooling in the digital forensics community:
+- Eric Zimmerman for Prefetch and forensic parser research
+- Didier Stevens for UserAssist registry analysis
+- Harlan Carvey for Windows Registry forensics
+- SANS Digital Forensics and Incident Response (DFIR) methodologies
+
+---
+
+## Disclaimer
+
+This tool is intended for authorized digital forensics, incident response, and security auditing on systems you own or have explicit authorization to examine. Unauthorized monitoring may violate applicable privacy and computer security laws.

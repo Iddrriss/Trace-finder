@@ -1,15 +1,4 @@
-"""
-TraceFinder - Windows Event Log Collectors
-collectors/events.py
-
-Author: Oxseeker
-Compliance: PEP8
-Description:
-    Forensic collectors for Windows Event Logs using built-in Windows
-    wevtutil utility and pure standard library XML parsing.
-    Captures Service Installations, System Shutdowns/Reboots, Process
-    Creations, Authentication Events, and PowerShell ScriptBlock Executions.
-"""
+"""Windows Event Log collectors for process, logon, service, and PowerShell activity."""
 
 import subprocess
 import xml.etree.ElementTree as ET
@@ -18,31 +7,19 @@ from datetime import datetime, timezone
 
 
 def parse_iso_systemtime(time_str):
-    """
-    Parse Windows Event SystemTime string (e.g. '2026-09-28T08:27:37.0237183Z')
-    into a timezone-aware UTC datetime.
-    
-    Args:
-        time_str (str): Raw timestamp from Event XML.
-        
-    Returns:
-        datetime: UTC-aware datetime or None if parsing fails.
-    """
+    """Parse Windows Event SystemTime string into a timezone-aware UTC datetime."""
     if not time_str:
         return None
     try:
-        # Standardize fractional seconds to microseconds and 'Z' to '+00:00'
-        # Example: 2026-09-28T08:27:37.0237183Z -> 2026-09-28T08:27:37.023718+00:00
         normalized = re.sub(r'(\.\d{1,6})\d*Z$', r'\1+00:00', time_str)
         if normalized.endswith('Z'):
             normalized = normalized[:-1] + '+00:00'
         elif not normalized.endswith('+00:00') and '+' not in normalized and '-' not in normalized[-6:]:
             normalized += '+00:00'
-        
+
         return datetime.fromisoformat(normalized)
     except Exception:
         try:
-            # Fallback parse for YYYY-MM-DDTHH:MM:SS
             base = time_str.split('.')[0]
             dt = datetime.strptime(base, '%Y-%m-%dT%H:%M:%S')
             return dt.replace(tzinfo=timezone.utc)
@@ -51,17 +28,7 @@ def parse_iso_systemtime(time_str):
 
 
 def execute_event_query(channel, xpath_query, max_count=250):
-    """
-    Query Windows Event Log via wevtutil and return root XML element.
-    
-    Args:
-        channel (str): Event log channel name (e.g. 'System', 'Security').
-        xpath_query (str): XPath filter for events.
-        max_count (int): Maximum number of recent events to retrieve.
-        
-    Returns:
-        list of xml.etree.ElementTree.Element: List of Event XML elements.
-    """
+    """Query Windows Event Log via wevtutil and return a list of Event XML elements."""
     events = []
     cmd = [
         'wevtutil.exe',
@@ -69,10 +36,10 @@ def execute_event_query(channel, xpath_query, max_count=250):
         channel,
         f'/q:{xpath_query}',
         f'/c:{max_count}',
-        '/rd:true',  # Most recent first
+        '/rd:true',
         '/f:xml'
     ]
-    
+
     try:
         proc = subprocess.run(
             cmd,
@@ -82,54 +49,45 @@ def execute_event_query(channel, xpath_query, max_count=250):
             encoding='utf-8',
             errors='ignore'
         )
-        
+
         if proc.returncode != 0 or not proc.stdout.strip():
             return events
-        
-        # wevtutil outputs multiple <Event> XML fragments without a single root
+
+        # wevtutil outputs unrooted XML fragments; wrap in a single root element
         wrapped_xml = f"<Events>{proc.stdout}</Events>"
         root = ET.fromstring(wrapped_xml)
         ns = {'ns': 'http://schemas.microsoft.com/win/2004/08/events/event'}
-        
+
         for event_elem in root.findall('ns:Event', ns):
             events.append(event_elem)
-            
+
     except (subprocess.TimeoutExpired, subprocess.SubprocessError, ET.ParseError, OSError):
         pass
-    
+
     return events
 
 
 def extract_event_fields(event_elem):
-    """
-    Extract standard fields and EventData dictionary from an Event XML element.
-    
-    Args:
-        event_elem (Element): The XML Element for <Event>.
-        
-    Returns:
-        dict: Standardized event details.
-    """
+    """Extract standard fields and EventData dictionary from an Event XML element."""
     ns = {'ns': 'http://schemas.microsoft.com/win/2004/08/events/event'}
-    
+
     system = event_elem.find('ns:System', ns)
     if system is None:
         return None
-    
+
     event_id_elem = system.find('ns:EventID', ns)
     event_id = int(event_id_elem.text) if event_id_elem is not None and event_id_elem.text else 0
-    
+
     time_created = system.find('ns:TimeCreated', ns)
     time_str = time_created.get('SystemTime') if time_created is not None else None
     timestamp_dt = parse_iso_systemtime(time_str)
-    
+
     provider_elem = system.find('ns:Provider', ns)
     provider = provider_elem.get('Name') if provider_elem is not None else 'Unknown'
-    
+
     channel_elem = system.find('ns:Channel', ns)
     channel = channel_elem.text if channel_elem is not None else 'Unknown'
-    
-    # Extract EventData key-value pairs
+
     data_dict = {}
     data_list = []
     event_data = event_elem.find('ns:EventData', ns)
@@ -140,7 +98,7 @@ def extract_event_fields(event_elem):
             if name:
                 data_dict[name] = val
             data_list.append(val)
-    
+
     return {
         'event_id': event_id,
         'timestamp_dt': timestamp_dt,
@@ -152,37 +110,28 @@ def extract_event_fields(event_elem):
 
 
 def parse_event_logs(triage_window):
-    """
-    Collect high-value forensic events from System, Security, and PowerShell logs.
-    
-    Args:
-        triage_window (TriageWindow): Time window for filtering.
-        
-    Returns:
-        list: Standardized finding dictionaries.
-    """
+    """Collect high-value forensic events from System, Security, and PowerShell logs."""
     findings = []
-    
-    # 1. System Channel Query: Services (7045, 7040), Reboots (1074), Up/Down (6005, 6006), Cleared (104)
+
+    # System log: service installs (7045), config changes (7040), reboots (1074), uptime (6005/6006), clears (104)
     system_xpath = "*[System[(EventID=7045 or EventID=7040 or EventID=1074 or EventID=6005 or EventID=6006 or EventID=104)]]"
     system_events = execute_event_query('System', system_xpath, max_count=200)
-    
+
     for event_elem in system_events:
         ev = extract_event_fields(event_elem)
         if not ev or not ev['timestamp_dt']:
             continue
-        
-        # Stop early if events are older than the window (since output is sorted newest-first)
+
         if ev['timestamp_dt'] < triage_window.cutoff_time:
             break
-        
+
         if not triage_window.is_within_window(ev['timestamp_dt']):
             continue
-        
+
         dt_str = ev['timestamp_dt'].strftime('%Y-%m-%d %H:%M:%S UTC')
         eid = ev['event_id']
         data = ev['data_dict']
-        
+
         if eid == 7045:
             svc_name = data.get('ServiceName', 'Unknown Service')
             img_path = data.get('ImagePath', 'N/A')
@@ -247,26 +196,26 @@ def parse_event_logs(triage_window):
                 'description': f"Service Start Type Changed: {svc_name}",
                 'details': f"New Start Type: {start_type}"
             })
-    
-    # 2. Security Channel Query: Process Creation (4688), Logons (4624/4625), Accounts (4720/4726), Cleared (1102)
+
+    # Security log: process creation (4688), logons (4624/4625), accounts (4720/4726), clears (1102)
     security_xpath = "*[System[(EventID=4688 or EventID=4624 or EventID=4625 or EventID=4720 or EventID=4726 or EventID=1102)]]"
     security_events = execute_event_query('Security', security_xpath, max_count=200)
-    
+
     for event_elem in security_events:
         ev = extract_event_fields(event_elem)
         if not ev or not ev['timestamp_dt']:
             continue
-        
+
         if ev['timestamp_dt'] < triage_window.cutoff_time:
             break
-        
+
         if not triage_window.is_within_window(ev['timestamp_dt']):
             continue
-        
+
         dt_str = ev['timestamp_dt'].strftime('%Y-%m-%d %H:%M:%S UTC')
         eid = ev['event_id']
         data = ev['data_dict']
-        
+
         if eid == 4688:
             proc_name = data.get('NewProcessName', 'Unknown Process')
             cmd_line = data.get('CommandLine', '')
@@ -284,7 +233,6 @@ def parse_event_logs(triage_window):
             user = data.get('TargetUserName', 'Unknown')
             logon_type = data.get('LogonType', 'N/A')
             ip = data.get('IpAddress', '-')
-            # Filter noisy computer accounts ending with $ if desired, or keep all
             findings.append({
                 'timestamp': dt_str,
                 'timestamp_dt': ev['timestamp_dt'],
@@ -337,29 +285,28 @@ def parse_event_logs(triage_window):
                 'description': "ALERT: Security Audit Log Cleared",
                 'details': f"Cleared by user: {actor}"
             })
-            
-    # 3. PowerShell Operational Log: Script Block Execution (4104)
+
+    # PowerShell operational log: script block execution (4104)
     ps_xpath = "*[System[(EventID=4104)]]"
     ps_events = execute_event_query('Microsoft-Windows-PowerShell/Operational', ps_xpath, max_count=100)
-    
+
     for event_elem in ps_events:
         ev = extract_event_fields(event_elem)
         if not ev or not ev['timestamp_dt']:
             continue
-        
+
         if ev['timestamp_dt'] < triage_window.cutoff_time:
             break
-        
+
         if not triage_window.is_within_window(ev['timestamp_dt']):
             continue
-        
+
         dt_str = ev['timestamp_dt'].strftime('%Y-%m-%d %H:%M:%S UTC')
         data = ev['data_dict']
         script_text = data.get('ScriptBlockText', '')
-        # Clean newlines for single-line display
         cleaned_text = ' '.join(script_text.split())
         path = data.get('Path', '')
-        
+
         findings.append({
             'timestamp': dt_str,
             'timestamp_dt': ev['timestamp_dt'],
@@ -368,5 +315,5 @@ def parse_event_logs(triage_window):
             'description': "PowerShell ScriptBlock Execution",
             'details': f"Path: {path or 'Interactive/In-memory'} | Code: {cleaned_text[:120]}"
         })
-    
+
     return findings
