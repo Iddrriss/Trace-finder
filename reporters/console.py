@@ -9,18 +9,30 @@ Compliance: PEP8
 Updated: Added local timezone display alongside UTC
 """
 
+import sys
 from datetime import datetime
 
+# Ensure UTF-8 output encoding on Windows consoles
+if sys.platform == 'win32':
+    try:
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        if hasattr(sys.stderr, 'reconfigure'):
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
 
-def print_banner():
+
+def print_banner(window_minutes=180):
     """Display TraceFinder ASCII banner."""
+    window_text = f"{window_minutes}-Minute Triage Window Analysis"
     print()
     print("=" * 70)
     print("╔════════════════════════════════════════════════════════════════════╗")
-    print("║                          TraceFinder v1.0                          ║")
-    print("║            Windows 11 Forensic Activity Detection Tool             ║")
+    print("║                         TraceFinder v1.1.0                         ║")
+    print("║            Windows Forensic Activity Detection & Triage            ║")
     print("║                                                                    ║")
-    print("║              180-Minute Triage Window Analysis                     ║")
+    print(f"║{window_text.center(68)}║")
     print("╚════════════════════════════════════════════════════════════════════╝")
     print("=" * 70)
     print()

@@ -89,7 +89,7 @@ def filetime_to_datetime(filetime):
     FILETIME_TICKS_PER_SECOND = 10000000
     
     try:
-        if filetime is None or filetime == 0:
+        if filetime is None or filetime <= 0:
             return None
         
         seconds_since_epoch = filetime / FILETIME_TICKS_PER_SECOND

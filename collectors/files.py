@@ -144,10 +144,12 @@ def parse_recentdocs(triage_window):
                                 
                                 if val_name != 'MRUListEx' and isinstance(val_data, bytes):
                                     try:
-                                        filename = val_data.decode(
+                                        decoded = val_data.decode(
                                             'utf-16-le',
                                             errors='ignore'
-                                        ).rstrip('\x00')
+                                        )
+                                        # RecentDocs binary entries start with a null-terminated UTF-16LE string
+                                        filename = decoded.split('\x00')[0].strip()
                                         
                                         if filename:
                                             findings.append({
@@ -160,7 +162,7 @@ def parse_recentdocs(triage_window):
                                                 'description': filename,
                                                 'details': f"Extension: .{extension}"
                                             })
-                                    except:
+                                    except Exception:
                                         pass
                                 
                                 val_index += 1

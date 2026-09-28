@@ -95,7 +95,10 @@ def parse_runmru(triage_window):
                     val_name, val_data, val_type = winreg.EnumValue(key, index)
                     
                     if val_name != 'MRUList' and val_data:
-                        command = val_data.rstrip('\\1')
+                        if isinstance(val_data, str):
+                            command = val_data[:-2] if val_data.endswith('\\1') else val_data
+                        else:
+                            command = str(val_data)
                         
                         findings.append({
                             'timestamp': key_modified.strftime('%Y-%m-%d %H:%M:%S UTC'),

@@ -1,0 +1,2 @@
+# TraceFinder requires no external dependencies.
+# It uses only the Python standard library (Python 3.8+).
