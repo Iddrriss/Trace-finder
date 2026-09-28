@@ -1,12 +1,12 @@
-# Trace-finder (v1.1.0)
+# Trace-finder (v2.0)
 
 A professional, modular forensic triage tool for Windows systems. TraceFinder helps incident responders, digital forensic examiners, and security analysts quickly detect user and system activity within a configurable time window (default: 180 minutes). Built with forensic best practices and **zero external dependencies**.
 
 ---
 
-## 🚀 What's New in v1.1.0 (Upgrade Notes)
+## 🚀 What's New in v2.0 (Upgrade Notes)
 
-TraceFinder has received a major upgrade from **v1.0.0** to **v1.1.0**. Here is a breakdown of what was added, improved, and fixed:
+TraceFinder has received a major upgrade from **v2.0** to **v2.0**. Here is a breakdown of what was added, improved, and fixed:
 
 ### 1. Windows Event Log Collector (`collectors/events.py`)
 - **System Event Logs**: Captures newly installed services (Event 7045), system shutdowns/reboots (Event 1074), OS boot and clean shutdown timestamps (Events 6005/6006), service startup configuration changes (Event 7040), and system log cleared events (Event 104 - anti-forensics alert).
