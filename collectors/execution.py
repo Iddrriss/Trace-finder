@@ -4,6 +4,7 @@ collectors/execution.py
 
 """
 
+import os
 import winreg
 import struct
 import codecs
@@ -93,7 +94,8 @@ def parse_prefetch(triage_window):
         list: List of dictionaries with standardized finding format.
     """
     findings = []
-    prefetch_path = Path(r'C:\Windows\Prefetch')
+    system_root = os.environ.get('SYSTEMROOT', r'C:\Windows')
+    prefetch_path = Path(system_root) / 'Prefetch'
     
     try:
         if not prefetch_path.exists():
